@@ -5,6 +5,7 @@ import com.example.dashboardbe.dto.PostRequestDto
 import com.example.dashboardbe.dto.PostResponseDto
 import com.example.dashboardbe.repository.PostRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class PostService(
@@ -41,5 +42,50 @@ class PostService(
 
         // 3. 저장이 무사히 끝나면, 데이터베이스가 부여해 준 고유 번호(id)를 돌려줍니다.
         return savedPost.id!!
+    }
+    // ▼ 새롭게 추가할 Read One (게시글 상세 조회) 함수 ▼
+    fun getPost(id: Long): PostResponseDto {
+        // 1. 창고 관리자에게 "이 번호(id)표 가진 식재료(Entity) 하나만 찾아와!" 라고 시킵니다.
+        // 만약 못 찾으면(orElseThrow) "그런 게시글 없는데요?" 하고 에러를 던집니다.
+        val post = postRepository.findById(id).orElseThrow {
+            IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=$id")
+        }
+
+        // 2. 무사히 찾았다면, 예쁜 접시(DTO)에 담아서 돌려줍니다.
+        return PostResponseDto(
+            id = post.id!!,
+            title = post.title,
+            content = post.content,
+            writer = post.writer
+        )
+    }
+
+    @Transactional // 마법의 명찰! (더티 체킹)
+    fun updatePost(id: Long, requestDto: PostRequestDto): PostResponseDto {
+        // 1. 창고에서 수정할 식재료(Entity)를 번호(id)로 꺼내옵니다.
+        val post = postRepository.findById(id).orElseThrow {
+            IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=$id")
+        }
+
+        // 2. 식재료에게 "손님이 준 새 주문서(DTO) 내용으로 네 모습 좀 바꿔!" 하고 버튼을 누릅니다.
+        post.update(requestDto.title, requestDto.content, requestDto.writer)
+
+        // 3. 수정된 요리를 예쁜 접시(DTO)에 담아서 돌려줍니다.
+        return PostResponseDto(
+            id = post.id!!,
+            title = post.title,
+            content = post.content,
+            writer = post.writer
+        )
+    }
+
+    fun deletePost(id: Long) {
+        // 1. 일단 버릴 식재료가 창고에 진짜 있는지 번호(id)로 찾아봅니다. (없으면 에러 던지기!)
+        val post = postRepository.findById(id).orElseThrow {
+            IllegalArgumentException("해당 게시글이 존재하지 않습니다. id=$id")
+        }
+
+        // 2. 창고 관리자에게 "이 식재료(post) 창고에서 완전히 지워버려!" 라고 명령합니다.
+        postRepository.delete(post)
     }
 }
